@@ -3,8 +3,11 @@ package com.fasterxml.jackson.databind.deser;
 import java.io.IOException;
 
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.deser.impl.PropertyValueBuffer;
 import com.fasterxml.jackson.databind.introspect.AnnotatedWithParams;
+import com.fasterxml.jackson.databind.type.LogicalType;
 
 /**
  * Class that defines simple API implemented by objects that create value
@@ -61,7 +64,7 @@ public abstract class ValueInstantiator
     public abstract String getValueTypeDesc();
 
     /**
-     * Method that will return true if any of <code>canCreateXxx</code> method
+     * Method that will return true if any of {@code canCreateXxx} method
      * returns true: that is, if there is any way that an instance could
      * be created.
      */
@@ -75,7 +78,10 @@ public abstract class ValueInstantiator
 
     /**
      * Method that can be called to check whether a String-based creator
-     * is available for this instantiator
+     * is available for this instantiator.
+     *<p>
+     * NOTE: does NOT include possible case of fallbacks, or coercion; only
+     * considers explicit creator.
      */
     public boolean canCreateFromString() { return false; }
 
@@ -247,9 +253,12 @@ public abstract class ValueInstantiator
     /* Instantiation methods for JSON scalar types (String, Number, Boolean)
     /**********************************************************************
      */
-    
+
     public Object createFromString(DeserializationContext ctxt, String value) throws IOException {
-        return _createFromStringFallbacks(ctxt, value);
+        return ctxt.handleMissingInstantiator(getValueClass(), this, ctxt.getParser(),
+                "no String-argument constructor/factory method to deserialize from String value ('%s')",
+                value);
+
     }
 
     public Object createFromInt(DeserializationContext ctxt, int value) throws IOException {
@@ -330,33 +339,6 @@ public abstract class ValueInstantiator
     /* Helper methods
     /**********************************************************************
      */
-
-    protected Object _createFromStringFallbacks(DeserializationContext ctxt, String value)
-            throws IOException
-    {
-        /* 28-Sep-2011, tatu: Ok this is not clean at all; but since there are legacy
-         *   systems that expect conversions in some cases, let's just add a minimal
-         *   patch (note: same could conceivably be used for numbers too).
-         */
-        if (canCreateFromBoolean()) {
-            String str = value.trim();
-            if ("true".equals(str)) {
-                return createFromBoolean(ctxt, true);
-            }
-            if ("false".equals(str)) {
-                return createFromBoolean(ctxt, false);
-            }
-        }
-        // also, empty Strings might be accepted as null Object...
-        if (value.length() == 0) {
-            if (ctxt.isEnabled(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT)) {
-                return null;
-            }
-        }
-        return ctxt.handleMissingInstantiator(getValueClass(), this, ctxt.getParser(),
-                "no String-argument constructor/factory method to deserialize from String value ('%s')",
-                value);
-    }
 
     /*
     /**********************************************************************

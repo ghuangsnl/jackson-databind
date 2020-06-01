@@ -240,7 +240,7 @@ public class StdValueInstantiator
     /* Public API implementation; instantiation from JSON Object
     /**********************************************************************
      */
-    
+
     @Override
     public Object createUsingDefault(DeserializationContext ctxt) throws IOException
     {
@@ -300,17 +300,17 @@ public class StdValueInstantiator
     @Override
     public Object createFromString(DeserializationContext ctxt, String value) throws IOException
     {
-        if (_fromStringCreator == null) {
-            return _createFromStringFallbacks(ctxt, value);
+        if (_fromStringCreator != null) {
+            try {
+                return _fromStringCreator.call1(value);
+            } catch (Throwable t) {
+                return ctxt.handleInstantiationProblem(_fromStringCreator.getDeclaringClass(),
+                        value, rewrapCtorProblem(ctxt, t));
+            }
         }
-        try {
-            return _fromStringCreator.call1(value);
-        } catch (Throwable t) {
-            return ctxt.handleInstantiationProblem(_fromStringCreator.getDeclaringClass(),
-                    value, rewrapCtorProblem(ctxt, t));
-        }
+        return super.createFromString(ctxt, value);
     }
-    
+
     @Override
     public Object createFromInt(DeserializationContext ctxt, int value) throws IOException
     {
@@ -381,7 +381,7 @@ public class StdValueInstantiator
                     arg, rewrapCtorProblem(ctxt, t0));
         }
     }
-    
+
     /*
     /**********************************************************************
     /* Extended API: configuration mutators, accessors

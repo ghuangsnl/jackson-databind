@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.base.ParserMinimalBase;
 import com.fasterxml.jackson.core.io.NumberOutput;
 import com.fasterxml.jackson.core.sym.FieldNameMatcher;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
+import com.fasterxml.jackson.core.util.JacksonFeatureSet;
 import com.fasterxml.jackson.core.util.SimpleTokenWriteContext;
 import com.fasterxml.jackson.databind.*;
 
@@ -627,14 +628,12 @@ sb.append("NativeObjectIds=").append(_hasNativeObjectIds).append(",");
      */
 
     @Override
-    public JsonGenerator enable(StreamWriteFeature f) {
-        _streamWriteFeatures |= f.getMask();
-        return this;
-    }
-
-    @Override
-    public JsonGenerator disable(StreamWriteFeature f) {
-        _streamWriteFeatures &= ~f.getMask();
+    public JsonGenerator configure(StreamWriteFeature f, boolean state) {
+        if (state) {
+            _streamWriteFeatures |= f.getMask();
+        } else {
+            _streamWriteFeatures &= ~f.getMask();
+        }
         return this;
     }
 
@@ -648,13 +647,6 @@ sb.append("NativeObjectIds=").append(_hasNativeObjectIds).append(",");
     @Override
     public int streamWriteFeatures() {
         return _streamWriteFeatures;
-    }
-
-    @Override // since 3.0
-    public int formatWriteFeatures() {
-        // 26-Oct-2018, tatu: Should not have anything format-specific... however,
-        // not all features  default to "false" so this may not be right choice?
-        return 0;
     }
 
     /*
@@ -687,6 +679,12 @@ sb.append("NativeObjectIds=").append(_hasNativeObjectIds).append(",");
 
     @Override
     public boolean isClosed() { return _closed; }
+
+    @Override
+    public Object getOutputTarget() { return null; }
+
+    @Override
+    public int getOutputBuffered() { return -1; }
 
     /*
     /**********************************************************************
@@ -1467,9 +1465,24 @@ sb.append("NativeObjectIds=").append(_hasNativeObjectIds).append(",");
             _location = l;
         }
 
+        /*
+        /**********************************************************
+        /* Public API, config access, capability introspection
+        /**********************************************************
+         */
+
         @Override
         public Version version() {
             return com.fasterxml.jackson.databind.cfg.PackageVersion.VERSION;
+        }
+
+        // 20-May-2020, tatu: This may or may not be enough -- ideally access is
+        //    via `DeserializationContext`, not parser, but if latter is needed
+        //    then we'll need to pass this from parser contents if which were
+        //    buffered.
+        @Override
+        public JacksonFeatureSet<StreamReadCapability> getReadCapabilities() {
+            return DEFAULT_READ_CAPABILITIES;
         }
 
         @Override

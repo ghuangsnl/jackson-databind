@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.deser.*;
 import com.fasterxml.jackson.databind.deser.impl.PropertyBasedCreator;
 import com.fasterxml.jackson.databind.deser.impl.PropertyValueBuffer;
 import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import com.fasterxml.jackson.databind.util.ClassUtil;
 
 /**
@@ -183,6 +184,11 @@ public class EnumMapDeserializer
                 && (_valueTypeDeserializer == null);
     }
 
+    @Override // since 2.12
+    public LogicalType logicalType() {
+        return LogicalType.Map;
+    }
+
     /*
     /**********************************************************
     /* ContainerDeserializerBase API
@@ -194,7 +200,11 @@ public class EnumMapDeserializer
         return _valueDeserializer;
     }
 
-    // Must override since we do not expose ValueInstantiator
+    @Override
+    public ValueInstantiator getValueInstantiator() {
+        return _valueInstantiator;
+    }
+
     @Override // since 2.9
     public Object getEmptyValue(DeserializationContext ctxt) throws JsonMappingException {
         return constructMap(ctxt);
@@ -219,16 +229,19 @@ public class EnumMapDeserializer
         }
         // Ok: must point to START_OBJECT
         JsonToken t = p.currentToken();
-        if ((t != JsonToken.START_OBJECT) && (t != JsonToken.FIELD_NAME) && (t != JsonToken.END_OBJECT)) {
-            // (empty) String may be ok however; or single-String-arg ctor
-            if (t == JsonToken.VALUE_STRING) {
-                return (EnumMap<?,?>) _valueInstantiator.createFromString(ctxt, p.getText());
-            }
-            // slightly redundant (since String was passed above), but also handles empty array case:
-            return _deserializeFromEmpty(p, ctxt);
+        if ((t == JsonToken.START_OBJECT) || (t == JsonToken.FIELD_NAME)
+                || (t == JsonToken.END_OBJECT)) {
+            return deserialize(p, ctxt, constructMap(ctxt));
         }
-        EnumMap result = constructMap(ctxt);
-        return deserialize(p, ctxt, result);
+        // (empty) String may be ok however; or single-String-arg ctor
+        if (t == JsonToken.VALUE_STRING) {
+            return _deserializeFromString(p, ctxt);
+        }
+        // Empty array, or single-value wrapped in array?
+        if (t == JsonToken.START_ARRAY) {
+            return _deserializeFromArray(p, ctxt);
+        }
+        return (EnumMap<?,?>) ctxt.handleUnexpectedToken(getValueType(ctxt), p);
     }
 
     @Override

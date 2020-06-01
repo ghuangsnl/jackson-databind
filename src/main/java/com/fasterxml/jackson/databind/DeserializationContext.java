@@ -14,6 +14,9 @@ import com.fasterxml.jackson.core.tree.ArrayTreeNode;
 import com.fasterxml.jackson.core.tree.ObjectTreeNode;
 import com.fasterxml.jackson.core.type.ResolvedType;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.util.JacksonFeatureSet;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.cfg.ContextAttributes;
 import com.fasterxml.jackson.databind.deser.*;
 import com.fasterxml.jackson.databind.deser.impl.ObjectIdReader;
@@ -33,6 +36,7 @@ import com.fasterxml.jackson.databind.introspect.ClassIntrospector;
 import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.util.*;
 
@@ -116,6 +120,11 @@ public abstract class DeserializationContext
      * when content is buffered.
      */
     protected transient JsonParser _parser;
+
+    /**
+     * Capabilities of the input format.
+     */
+    protected transient JacksonFeatureSet<StreamReadCapability> _readCapabilities;
 
     /*
     /**********************************************************************
@@ -395,9 +404,8 @@ public abstract class DeserializationContext
      * feature is enabled
      */
     public final boolean isEnabled(DeserializationFeature feat) {
-        /* 03-Dec-2010, tatu: minor shortcut; since this is called quite often,
-         *   let's use a local copy of feature settings:
-         */
+        // 03-Dec-2010, tatu: minor shortcut; since this is called quite often,
+        //   let's use a local copy of feature settings:
         return (_featureFlags & feat.getMask()) != 0;
     }
 
@@ -434,6 +442,18 @@ public abstract class DeserializationContext
      * to the active parser, that should be used instead.
      */
     public final JsonParser getParser() { return _parser; }
+
+    /**
+     * Accessor for checking whether input format has specified capability
+     * or not.
+     *
+     * @return True if input format has specified capability; false if not
+     *
+     * @since 2.12
+     */
+    public final boolean isEnabled(StreamReadCapability cap) {
+        return _readCapabilities.isEnabled(cap);
+    }
 
     public final Object findInjectableValue(Object valueId,
             BeanProperty forProperty, Object beanInstance)
@@ -528,6 +548,49 @@ public abstract class DeserializationContext
      */
     public boolean hasExplicitDeserializerFor(Class<?> valueType) {
         return _factory.hasExplicitDeserializerFor(this, valueType);
+    }
+
+    /*
+    /**********************************************************************
+    /* Public API, CoercionConfig access (2.12+)
+    /**********************************************************************
+     */
+
+    /**
+     * General-purpose accessor for finding what to do when specified coercion
+     * from shape that is now always allowed to be coerced from is requested.
+     *
+     * @param targetType Logical target type of coercion
+     * @param targetClass Physical target type of coercion
+     * @param inputShape Input shape to coerce from
+     *
+     * @return CoercionAction configured for specific coercion
+     */
+    public CoercionAction findCoercionAction(LogicalType targetType,
+            Class<?> targetClass, CoercionInputShape inputShape)
+    {
+        return _config.findCoercionAction(targetType, targetClass, inputShape);
+    }
+
+    /**
+     * More specialized accessor called in case of input being a blank
+     * String (one consisting of only white space characters with length of at least one).
+     * Will basically first determine if "blank as empty" is allowed: if not,
+     * returns {@code actionIfBlankNotAllowed}, otherwise returns action for
+     * {@link CoercionInputShape#EmptyString}.
+     *
+     * @param targetType Logical target type of coercion
+     * @param targetClass Physical target type of coercion
+     * @param actionIfBlankNotAllowed Return value to use in case "blanks as empty"
+     *    is not allowed
+     *
+     * @return CoercionAction configured for specified coercion from blank string
+     */
+    public CoercionAction findCoercionFromBlankString(LogicalType targetType,
+            Class<?> targetClass,
+            CoercionAction actionIfBlankNotAllowed)
+    {
+        return _config.findCoercionFromBlankString(targetType, targetClass, actionIfBlankNotAllowed);
     }
 
     /*

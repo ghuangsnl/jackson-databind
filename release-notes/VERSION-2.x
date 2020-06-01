@@ -6,7 +6,7 @@ Project: jackson-databind
 
 2.12.0 (not yet released)
 
-#792: Deserialization Not Working Right with Generic Types and Builders
+#921: Deserialization Not Working Right with Generic Types and Builders
  (reported by Mike G; fix contributed by Ville K)
 #1886: Allow use of `@JsonFormat(with=JsonFormat.Feature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)`
   on Class
@@ -15,10 +15,23 @@ Project: jackson-databind
  (reported by Incara@github)
 #2091: `ReferenceType` does not expose valid containedType
  (reported by Nate B)
+#2118: `JsonProperty.Access.READ_ONLY` does not work with "getter-as-setter" `Collection`s
+ (reported by Xiang Z)
+#2283: `JsonProperty.Access.READ_ONLY` fails with collections when a property name is specified
+ (reported by Yona A)
 #2675: Support use of `Void` valued properties (`MapperFeature.ALLOW_VOID_VALUED_PROPERTIES`)
 #2683: Explicitly fail (de)serialization of `java.time.*` types in absence of
   registered custom (de)serializers
 #2707: Improve description included in by `DeserializationContext.handleUnexpectedToken()`
+#2719: `FAIL_ON_IGNORED_PROPERTIES` does not throw on `READONLY` properties with
+  an explicit name
+ (reported, fix contributed by David B)
+#2726: Add Gradle Module Metadata for version alignment with Gradle 6
+ (contributed by Jendrik J)
+#2732: Allow `JsonNode` auto-convert into `ArrayNode` if duplicates found (for XML)
+#2733: Allow values of "untyped" auto-convert into `List` if duplicates found (for XML)
+- Add `BeanDeserializerBase.isCaseInsensitive()`
+- Some refactoring of `CollectionDeserializer` to solve CSV array handling issues
 
 2.11.1 (not yet released)
 

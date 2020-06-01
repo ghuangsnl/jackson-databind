@@ -1114,3 +1114,22 @@ Mike Gilbode (gilbode@github)
 Nate Bauernfeind (nbauernfeind@github)
   * Reported #2091: `ReferenceType` does not expose valid containedType
   (2.12.0)
+
+Xiang Zhang (zhangyangyu@github)
+  * Reported #2118: `JsonProperty.Access.READ_ONLY` does not work with "getter-as-setter"
+    Collections
+  (2.12.0)
+
+Yona Appletree (Yona-Appletree@github)
+  * Reported #2283: `JsonProperty.Access.READ_ONLY` fails with collections when a
+    property name is specified
+  (2.12.0)
+
+David Bidorff (bidorffOL@github)
+  * Reported, contributed fix for #2719: `FAIL_ON_IGNORED_PROPERTIES` does not throw
+    on `READONLY` properties with an explicit name
+  (2.12.0)
+
+Jendrik Johannes (jjohannes@github)
+  * Contributed #2726: Add Gradle Module Metadata for version alignment with Gradle 6
+  (2.12.0)

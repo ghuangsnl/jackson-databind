@@ -310,12 +310,19 @@ public class ObjectMapper
         
         // General framework factories
         _streamFactory = builder.streamFactory();
+
         final ConfigOverrides configOverrides;
         {
             // bit tricky as we do NOT want to expose simple accessors (to a mutable thing)
             final AtomicReference<ConfigOverrides> ref = new AtomicReference<>();
             builder.withAllConfigOverrides(overrides -> ref.set(overrides));
             configOverrides = Snapshottable.takeSnapshot(ref.get());
+        }
+        final CoercionConfigs coercionConfigs;
+        {
+            final AtomicReference<CoercionConfigs> ref = new AtomicReference<>();
+            builder.withAllCoercionConfigs(overrides -> ref.set(overrides));
+            coercionConfigs = Snapshottable.takeSnapshot(ref.get());
         }
 
         // Handlers, introspection
@@ -342,7 +349,7 @@ public class ObjectMapper
         FilterProvider filterProvider = Snapshottable.takeSnapshot(builder.filterProvider());
         _deserializationConfig = builder.buildDeserializationConfig(configOverrides,
                 mixIns, _typeFactory, classIntr, subtypeResolver,
-                rootNames);
+                rootNames, coercionConfigs);
         _serializationConfig = builder.buildSerializationConfig(configOverrides,
                 mixIns, _typeFactory, classIntr, subtypeResolver,
                 rootNames, filterProvider);
@@ -1080,7 +1087,7 @@ public class ObjectMapper
     public JsonNode readTree(InputStream in) throws IOException
     {
         _assertNotNull("in", in);
-        DeserializationContext ctxt = _deserializationContext();
+        DefaultDeserializationContext ctxt = _deserializationContext();
         return _readTreeAndClose(ctxt, _streamFactory.createParser(ctxt, in));
     }
 
@@ -1090,7 +1097,7 @@ public class ObjectMapper
      */
     public JsonNode readTree(Reader r) throws IOException {
         _assertNotNull("r", r);
-        DeserializationContext ctxt = _deserializationContext();
+        DefaultDeserializationContext ctxt = _deserializationContext();
         return _readTreeAndClose(ctxt, _streamFactory.createParser(ctxt, r));
     }
 
@@ -1100,7 +1107,7 @@ public class ObjectMapper
      */
     public JsonNode readTree(String content) throws IOException {
         _assertNotNull("content", content);
-        DeserializationContext ctxt = _deserializationContext();
+        DefaultDeserializationContext ctxt = _deserializationContext();
         return _readTreeAndClose(ctxt, _streamFactory.createParser(ctxt, content));
     }
 
@@ -1110,7 +1117,7 @@ public class ObjectMapper
      */
     public JsonNode readTree(byte[] content) throws IOException {
         _assertNotNull("content", content);
-        DeserializationContext ctxt = _deserializationContext();
+        DefaultDeserializationContext ctxt = _deserializationContext();
         return _readTreeAndClose(ctxt, _streamFactory.createParser(ctxt, content));
     }
 
@@ -1120,7 +1127,7 @@ public class ObjectMapper
      */
     public JsonNode readTree(byte[] content, int offset, int len) throws IOException {
         _assertNotNull("content", content);
-        DeserializationContext ctxt = _deserializationContext();
+        DefaultDeserializationContext ctxt = _deserializationContext();
         return _readTreeAndClose(ctxt, _streamFactory.createParser(ctxt, content, offset, len));
     }
 
@@ -1131,7 +1138,7 @@ public class ObjectMapper
     public JsonNode readTree(File file) throws IOException
     {
         _assertNotNull("file", file);
-        DeserializationContext ctxt = _deserializationContext();
+        DefaultDeserializationContext ctxt = _deserializationContext();
         return _readTreeAndClose(ctxt, _streamFactory.createParser(ctxt, file));
     }
 
@@ -1147,7 +1154,7 @@ public class ObjectMapper
      */
     public JsonNode readTree(URL src) throws IOException {
         _assertNotNull("src", src);
-        DeserializationContext ctxt = _deserializationContext();
+        DefaultDeserializationContext ctxt = _deserializationContext();
         return _readTreeAndClose(ctxt, _streamFactory.createParser(ctxt, src));
     }
 
@@ -2443,10 +2450,11 @@ public class ObjectMapper
     /**
      * Similar to {@link #_readMapAndClose} but specialized for <code>JsonNode</code> reading.
      */
-    protected JsonNode _readTreeAndClose(DeserializationContext ctxt,
+    protected JsonNode _readTreeAndClose(DefaultDeserializationContext ctxt,
             JsonParser p0) throws IOException
     {
-        try (JsonParser p = p0) {
+        try (JsonParser p = ctxt.assignAndReturnParser(p0)) {
+            
             final JavaType valueType = JSON_NODE_TYPE;
             DeserializationConfig cfg = deserializationConfig();
 

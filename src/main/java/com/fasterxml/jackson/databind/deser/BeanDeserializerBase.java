@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.exc.IgnoredPropertyException;
 import com.fasterxml.jackson.databind.introspect.*;
 import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import com.fasterxml.jackson.databind.type.ClassKey;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import com.fasterxml.jackson.databind.util.*;
 
 /**
@@ -968,6 +969,19 @@ public abstract class BeanDeserializerBase
     @Override
     public boolean isCachable() { return true; }
 
+    /**
+     * Accessor for checking whether this deserializer is operating
+     * in case-insensitive manner.
+     * 
+     * @return True if this deserializer should match property names without
+     *    considering casing; false if case has to match exactly.
+     *
+     * @since 2.12
+     */
+    public boolean isCaseInsensitive() {
+        return _beanProperties.isCaseInsensitive();
+    }
+
     @Override // since 2.9
     public Boolean supportsUpdate(DeserializationConfig config) {
         // although with possible caveats, yes, values can be updated
@@ -1025,6 +1039,11 @@ public abstract class BeanDeserializerBase
 
     @Override
     public JavaType getValueType() { return _beanType; }
+
+    @Override // since 2.12
+    public LogicalType logicalType() {
+        return LogicalType.POJO;
+    }
 
     /**
      * Accessor for iterating over properties this deserializer uses; with
@@ -1351,7 +1370,7 @@ public abstract class BeanDeserializerBase
                 return bean;
             }
         }
-        return _valueInstantiator.createFromString(ctxt, p.getText());
+        return _deserializeFromString(p, ctxt);
     }
 
     /**
@@ -1442,7 +1461,7 @@ public abstract class BeanDeserializerBase
         return value;
     }
 
-    private final JsonDeserializer<Object> _delegateDeserializer() {
+    protected final JsonDeserializer<Object> _delegateDeserializer() {
         JsonDeserializer<Object> deser = _delegateDeserializer;
         if (deser == null) {
             deser = _arrayDelegateDeserializer;
